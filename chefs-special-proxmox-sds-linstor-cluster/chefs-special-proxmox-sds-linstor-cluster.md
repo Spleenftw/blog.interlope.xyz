@@ -460,7 +460,7 @@ Promoter: Currently active on node 'petunia'
 *pve02* aka *petunia* is currently the linstor-controller.
 
 
-Now, i've tuned this a little bit since i've created a CARP (**C**ommon **A**ddress **R**edundancy **P**rotocol) via keepalived to access :
+Now, i've tuned this a little bit since i've created a VIP (**V**irtual **IP**) via keepalived to access :
 - the proxmox cluster via an url, which doesn't change
 - the linstor-controller GUI(who can change), via the same IP
 - the linstor-controller for its clients (proxmox cluster, and the two other nodes)
@@ -469,7 +469,7 @@ But how does this works ? Each node has a keepalived configuration that basicall
 
 *If you have the linstor-controller running, TAKE THAT IP and don't asks questions*
 
-We saw earlier that *pve02* was the current controller. If we look at his IP adresses, the CARP should be there :
+We saw earlier that *pve02* was the current controller. If we look at his IP adresses, the VIP should be there :
 ```
 interlope@petunia:~$ ip -br -c a | grep .100
 enp1s0f1np1      UP             10.100.4.102/24 10.100.4.100/24 fe80::3efd:feff:fee5:5535/64 
@@ -501,7 +501,7 @@ EOF
 chmod +x /usr/local/bin/check_linstor.sh
 ```
 
-- Create the keepalived conf file that will check the result of the script and give/or not the CARP, on **all nodes** :
+- Create the keepalived conf file that will check the result of the script and give/or not the VIP, on **all nodes** :
 
 ```
 cat <<EOF > /etc/keepalived/keepalived.conf
@@ -538,13 +538,13 @@ systemctl start keepalived
 ```
 
 On the node who has the linstor-controller service up and running, once you've started the keepalived service, you should see a secondary ip on it.
-Now that the linstor CARP is configured, that the linstor-controller-HA is working, let's use our storage !
+Now that the linstor VIP is configured, that the linstor-controller-HA is working, let's use our storage !
 
-- Enable on linstor-client conf, the new CARP instead of our 3 nodes IP Adresses :
+- Enable on linstor-client conf, the new VIP instead of our 3 nodes IP Adresses :
 ```
 cat <<EOF > /etc/linstor/linstor-client.conf
 [global]
-controllers=CARPADRESS
+controllers=VIPADRESS
 EOF
 ```
 
@@ -554,13 +554,13 @@ EOF
 
 drbd: linstor
 	content images,rootdir
-	controller CARPADRESS
+	controller VIPADRESS
 	resourcegroup res-gr_pve
 
 systemctl restart pve-cluster pvedaemon pvestatd pveproxy pve-ha-lrm
 ```
 
-### <u>How I use the CARP :</u>
+### <u>How I use the VIP :</u>
 
 I've DNS entries poiting the ``3.100`` and ``4.100``  to my nginx reverse-proxy which then redirect the ``3.100`` to ``pve.local.ndd`` and ``4.100`` to ``linstor.local.ndd`` so that I can access both the cluster and the lisntor-gui on what-ever node it is running on.
 
